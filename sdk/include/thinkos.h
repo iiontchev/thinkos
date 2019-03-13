@@ -41,7 +41,8 @@ enum thinkos_err {
 	THINKOS_EPERM     = -6,
 	THINKOS_ENOSYS    = -7, /**< Invalid system call */
 	THINKOS_EFAULT    = -8,        
-	THINKOS_ENOMEM    = -9  /**< Resource pool exausted */ 
+	THINKOS_ENOMEM    = -9,  /**< Resource pool exausted */ 
+	THINKOS_EBADF     = -10  /**< Closing console if not open */ 
 };
 
 enum thinkos_obj_kind {
@@ -59,9 +60,10 @@ enum thinkos_obj_kind {
 	THINKOS_OBJ_CONWRITE  = 11,
 	THINKOS_OBJ_PAUSED    = 12,
 	THINKOS_OBJ_CANCELED  = 13,
-	THINKOS_OBJ_FAULT     = 14,
-	THINKOS_OBJ_COMMSEND  = 15,
-	THINKOS_OBJ_COMMRECV  = 16,
+	THINKOS_OBJ_COMMSEND  = 14,
+	THINKOS_OBJ_COMMRECV  = 15,
+	THINKOS_OBJ_IRQ       = 16,
+	THINKOS_OBJ_FAULT     = 17,
 	THINKOS_OBJ_INVALID
 };
 
@@ -658,8 +660,8 @@ int thinkos_gate_timedwait(int gate, unsigned int ms);
  * scenarios ... :
  * -# the gate is open already, then this function does nothing.
  * -# the gate is closed and no threads are waiting it will open the gate,
- * allowing the next thread to call @c gate_open() to enter the gate.
- * -# the gate is closed and at least one thread is waiting it will allow 
+ * allowing for the next thread calling @c gate_open() to enter the gate.
+ * -# the gate is closed and at least one thread is waiting then it will allow 
  * the thread to cross the gate, in this case the gate will be locked.
  * -# a thread crossed the gate (gate state is @b LOCKED), then the gate
  * will be signaled to open when the gate is unlocked.
@@ -689,8 +691,7 @@ void thinkos_gate_open_i(int gate);
  */
 int thinkos_gate_close(int gate);
 
-/** @brief Exit the gate, leaving the gate, optionally leaving it open 
- * or closed.
+/** @brief Exit the gate, optionally leaving it open or closed.
  *
  * @param gate The gate descriptor.
  * @param open Indicate the state of the gate on exit. 
@@ -724,7 +725,7 @@ int thinkos_irq_wait(int irq);
  * @param isr 
  * @return #THINKOS_ENOSYS if call is not implemented, #THINKOS_OK otherwise. 
  */
-int	thinkos_irq_register(int irq, int pri, void (* isr)(void));
+int	thinkos_irq_register(int irq, unsigned int pri, void (* isr)(void));
 /**@}*/
 
 

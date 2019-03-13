@@ -1,9 +1,9 @@
 /* 
- * File:	 board.h
+ * File:	 /thinkos/dbgmon.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
- * Copyright(c) 2003-2006 BORESTE (www.boreste.com). All Rights Reserved.
+ * Copyright(C) 2011-2018 Bob Mittmann. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -41,6 +41,19 @@
     #define THINKOS_ENABLE_RESET_RAM_VECTORS 0
   #endif
 #endif
+
+#ifndef THINKOS_DBGMON_STACK_SIZE
+#define THINKOS_DBGMON_STACK_SIZE (960 + 16)
+#endif
+
+#ifndef THINKOS_DBGMON_ENABLE_IRQ_MGMT
+#define THINKOS_DBGMON_ENABLE_IRQ_MGMT 1 
+#endif
+
+#ifndef THINKOS_DBGMON_ENABLE_RST_VEC
+#define THINKOS_DBGMON_ENABLE_RST_VEC CM3_RAM_VECTORS 
+#endif
+
 
 #include <sys/usb-dev.h>
 
@@ -122,7 +135,7 @@ void thinkos_dbgmon_svc(int32_t arg[], int self);
 
 void dbgmon_reset(void);
 
-void __attribute__((noreturn)) dbgmon_exec(void (* task)(struct dmon_comm *));
+void __attribute__((naked)) dbgmon_exec(void (* task)(struct dmon_comm *, void *), void * param);
 
 int dbgmon_unmask(int sig);
 

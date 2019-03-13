@@ -1102,7 +1102,11 @@
 #define RCC_SPI3RST (1 << 15)
 /* Set and cleared by software.
    0: No effect
-   1: Reset SPI3 Bit 14 SPI2RST(2): SPI2 reset Set and cleared by software.
+   1: Reset SPI3 */
+
+/* Bit 14 - SPI2 reset */
+#define RCC_SP23RST (1 << 14)
+/* Set and cleared by software.
    0: No effect
    1: Reset SPI2 */
 
@@ -2007,6 +2011,16 @@
 
 /* Bits [8..9] - Reserved, must be kept at reset value. */
 
+/* Bits [4..5] - USART3 clock source selection */
+#define RCC_USART3SEL_MSK (0x3 << 4)
+#define RCC_USART3SEL_SET(VAL) (((VAL) << 4) & RCC_USART3SEL_MSK)
+#define RCC_USART3SEL_GET(REG) (((REG) & RCC_USART3SEL_MSK) >> 4)
+/* This bit is set and cleared by software to select the USART3 clock source.
+   00: PCLK selected as USART3 clock
+   01: System clock (SYSCLK) selected as USART3 clock
+   10: HSI16 clock selected as USART3 clock
+   11: LSE clock selected as USART3 clock */
+
 /* Bits [2..3] - USART2 clock source selection */
 #define RCC_USART2SEL_MSK (0x3 << 2)
 #define RCC_USART2SEL_SET(VAL) (((VAL) << 2) & RCC_USART2SEL_MSK)
@@ -2255,7 +2269,6 @@
 #define RCC_DMA1   0
 
 /* AHB2 preipheral bit mapping */
-
 #define RCC_RNG     18
 #define RCC_AES     16
 #define RCC_ADC     13
@@ -2267,30 +2280,31 @@
 #define RCC_GPIOA   0
 
 /* AHB3 preipheral bit mapping */
-
 #define RCC_QSPI   8
 
 /* APB1 preipheral bit mapping */
-#define RCC_LPTIM1  31
-#define RCC_OPAMP   30
-#define RCC_DAC1    29
-#define RCC_PWR     28
-#define RCC_USBFS   26
-#define RCC_CAN1    25
-#define RCC_CRS     24
-#define RCC_I2C3    23
-#define RCC_I2C2    22
-#define RCC_I2C1    21
-#define RCC_UART4   19
-#define RCC_USART3  18
-#define RCC_USART2  17
-#define RCC_SPI3    15
-#define RCC_SPI2    14
-#define RCC_LCD     9
-#define RCC_TIM7    5
-#define RCC_TIM6    4
-#define RCC_TIM3    1
-#define RCC_TIM2    0
+#define RCC_LPTIM1   31
+#define RCC_OPAMP    30
+#define RCC_DAC1     29
+#define RCC_PWR      28
+#define RCC_USBFS    26
+#define RCC_CAN1     25
+#define RCC_CRS      24
+#define RCC_I2C3     23
+#define RCC_I2C2     22
+#define RCC_I2C1     21
+#define RCC_UART4    19
+#define RCC_USART3   18
+#define RCC_USART2   17
+#define RCC_SPI3     15
+#define RCC_SPI2     14
+#define RCC_WWDG     11
+#define RCC_RTCAPB   10
+#define RCC_LCD       9
+#define RCC_TIM7      5
+#define RCC_TIM6      4
+#define RCC_TIM3      1
+#define RCC_TIM2      0
 
 /* APB1 preipheral bit mapping 2 */
 #define RCC_LPTIM2  5

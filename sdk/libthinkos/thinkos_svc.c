@@ -140,7 +140,9 @@ void thinkos_gate_timedwait_svc(int32_t * arg, int self);
 
 void thinkos_irq_wait_svc(int32_t * arg, int self);
 
-void thinkos_irq_register_svc(int32_t * arg);
+void thinkos_irq_timedwait_svc(int32_t * arg, int self);
+
+void thinkos_irq_timedwait_cleanup_svc(int32_t * arg, int self);
 
 void thinkos_irq_ctl_svc(int32_t * arg);
 
@@ -164,18 +166,18 @@ void thinkos_escalate_svc(int32_t * arg)
 }
 #endif
 
-void thinkos_nosys(int32_t * arg)
+static void thinkos_nosys(int32_t * arg)
 {
-	__thinkos_error(THINKOS_ERR_SYSCALL_INVALID);
+	__THINKOS_ERROR(THINKOS_ERR_SYSCALL_INVALID);
 	arg[0] = THINKOS_ENOSYS;
 }
 
-void thinkos_clock_svc(int32_t * arg)
+static void thinkos_clock_svc(int32_t * arg)
 {
 	arg[0] = thinkos_rt.ticks;
 }
 
-void thinkos_thread_self_svc(int32_t * arg, int32_t self)
+static void thinkos_thread_self_svc(int32_t * arg, int32_t self)
 {
 	/* Internal thread ids start form 0 whereas user
 	   thread numbers start form one ... */
@@ -195,7 +197,7 @@ void thinkos_critical_enter_svc(int32_t * arg)
 void thinkos_critical_exit_svc(int32_t * arg)
 {
 	if (thinkos_rt.critical_cnt == 0) {
-		__thinkos_error(THINKOS_ERR_CRITICAL_EXIT);
+		__THINKOS_ERROR(THINKOS_ERR_CRITICAL_EXIT);
 		arg[0] = THINKOS_EFAULT;
 	} else if ((--thinkos_rt.critical_cnt) == 0) {
 		__thinkos_defer_sched();
@@ -568,12 +570,20 @@ void thinkos_svc_isr(int32_t * arg, int32_t self, uint32_t svc)
 #endif /* THINKOS_IRQ_MAX > 0 */
 		break;
 
-	case THINKOS_IRQ_REGISTER:
-#if CM3_RAM_VECTORS
-		thinkos_irq_register_svc(arg);
+	case THINKOS_IRQ_TIMEDWAIT:
+#if THINKOS_ENABLE_IRQ_TIMEDWAIT 
+		thinkos_irq_timedwait_svc(arg, self);
 #else
 		thinkos_nosys(arg);
-#endif /* CM3_RAM_VECTORS */
+#endif /* THINKOS_ENABLE_IRQ_TIMEDWAIT  */
+		break;
+
+	case THINKOS_IRQ_TIMEDWAIT_CLEANUP:
+#if THINKOS_ENABLE_IRQ_TIMEDWAIT 
+		thinkos_irq_timedwait_cleanup_svc(arg, self);
+#else
+		thinkos_nosys(arg);
+#endif /* THINKOS_ENABLE_IRQ_TIMEDWAIT  */
 		break;
 
 	case THINKOS_IRQ_CTL:
@@ -581,7 +591,7 @@ void thinkos_svc_isr(int32_t * arg, int32_t self, uint32_t svc)
 		thinkos_irq_ctl_svc(arg);
 #else
 		thinkos_nosys(arg);
-#endif /* CM3_RAM_VECTORS */
+#endif /* THINKOS_ENABLE_IRQ_CTL */
 		break;
 
 
@@ -590,7 +600,7 @@ void thinkos_svc_isr(int32_t * arg, int32_t self, uint32_t svc)
  * --------------------------------------------- */
 
 #if THINKOS_MUTEX_MAX > 0
-#if THINKOS_ENABLE_MUTEX_ALLOC
+  #if THINKOS_ENABLE_MUTEX_ALLOC
 	case THINKOS_MUTEX_ALLOC:
 		thinkos_mutex_alloc_svc(arg);
 		break;
@@ -598,11 +608,11 @@ void thinkos_svc_isr(int32_t * arg, int32_t self, uint32_t svc)
 	case THINKOS_MUTEX_FREE:
 		thinkos_mutex_free_svc(arg);
 		break;
-#endif /* THINKOS_MUTEX_ALLOC */
+  #endif /* THINKOS_MUTEX_ALLOC */
 #endif /* THINKOS_MUTEX_MAX > 0 */
 
 #if THINKOS_SEMAPHORE_MAX > 0
-#if THINKOS_ENABLE_SEM_ALLOC
+  #if THINKOS_ENABLE_SEM_ALLOC
 	case THINKOS_SEM_ALLOC:
 		thinkos_sem_alloc_svc(arg);
 		break;
@@ -610,11 +620,11 @@ void thinkos_svc_isr(int32_t * arg, int32_t self, uint32_t svc)
 	case THINKOS_SEM_FREE:
 		thinkos_sem_free_svc(arg);
 		break;
-#endif /* THINKOS_ENABLE_SEM_ALLOC */
+  #endif /* THINKOS_ENABLE_SEM_ALLOC */
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
 #if THINKOS_COND_MAX > 0
-#if THINKOS_ENABLE_COND_ALLOC
+  #if THINKOS_ENABLE_COND_ALLOC
 	case THINKOS_COND_ALLOC:
 		thinkos_cond_alloc_svc(arg);
 		break;
@@ -622,11 +632,11 @@ void thinkos_svc_isr(int32_t * arg, int32_t self, uint32_t svc)
 	case THINKOS_COND_FREE:
 		thinkos_cond_free_svc(arg);
 		break;
-#endif /* THINKOS_COND_ALLOC */
+  #endif /* THINKOS_COND_ALLOC */
 #endif /* THINKOS_COND_MAX > 0 */
 
 #if (THINKOS_FLAG_MAX > 0)
-#if THINKOS_ENABLE_FLAG_ALLOC
+  #if THINKOS_ENABLE_FLAG_ALLOC
 	case THINKOS_FLAG_ALLOC:
 		thinkos_flag_alloc_svc(arg);
 		break;
@@ -634,11 +644,11 @@ void thinkos_svc_isr(int32_t * arg, int32_t self, uint32_t svc)
 	case THINKOS_FLAG_FREE:
 		thinkos_flag_free_svc(arg);
 		break;
-#endif
+  #endif
 #endif /* (THINKOS_FLAG_MAX > 0) */
 
 #if (THINKOS_EVENT_MAX > 0)
-#if THINKOS_ENABLE_EVENT_ALLOC
+  #if THINKOS_ENABLE_EVENT_ALLOC
 	case THINKOS_EVENT_ALLOC:
 		thinkos_ev_alloc_svc(arg);
 		break;
@@ -646,11 +656,11 @@ void thinkos_svc_isr(int32_t * arg, int32_t self, uint32_t svc)
 	case THINKOS_EVENT_FREE:
 		thinkos_ev_free_svc(arg);
 		break;
-#endif
+  #endif
 #endif /* (THINKOS_EVENT_MAX > 0) */
 
 #if (THINKOS_GATE_MAX > 0)
-#if THINKOS_ENABLE_GATE_ALLOC
+  #if THINKOS_ENABLE_GATE_ALLOC
 	case THINKOS_GATE_ALLOC:
 		thinkos_gate_alloc_svc(arg);
 		break;
@@ -658,7 +668,7 @@ void thinkos_svc_isr(int32_t * arg, int32_t self, uint32_t svc)
 	case THINKOS_GATE_FREE:
 		thinkos_gate_free_svc(arg);
 		break;
-#endif
+  #endif
 #endif /* (THINKOS_GATE_MAX > 0) */
 
 	case THINKOS_JOIN:

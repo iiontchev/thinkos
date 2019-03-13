@@ -149,13 +149,15 @@ void trace_init(void)
 #define TRACE_ARG_MAX 20
 
 /* Double to uint64_t binary copy */
-#define DOUBLE2UINT64(D) ({ union { double d; uint64_t u; } a; a.d = (D); a.u;})
-/* Convert from double to an uint32_t encoded floating point */
+#define DOUBLE2UINT64(D) ({ union { double d; uint64_t u; } a; \
+						  a.d = (D); a.u;})
+/* Convert from double to an uint32_t encoded floating point. */
 static inline uint32_t __double2u32(double val) {
 	uint64_t x = DOUBLE2UINT64(val);
-	return ((uint32_t)(x >> 32) & 0x80000000) | 
-		((((int32_t)((uint32_t)(x >> 52) & 0x7ff) - 896) & 0xff) << 23) |
-		(((uint32_t)(x >> 29)) & 0x007fffff);
+	return ((uint32_t)(x >> 32) & 0x80000000) + 
+		(((uint32_t)((x >> 52) & 0x7f) + 
+		  (uint32_t)((x >> 55) & 0x80)) << 23) +
+		(((((uint32_t)(x >> 20)) & 0xffffffff) + 0x7f) >> 9);
 }
 
 int vtracef(uint32_t buf[], const struct trace_ref * ref, va_list ap)
@@ -316,6 +318,82 @@ void trace(const struct trace_ref * ref)
 #endif
 }
 
+void tracex(const struct trace_ref * ref, const void * buf, size_t len)
+{
+	uint8_t * cp = (uint8_t *)buf;
+	unsigned int head;
+#if !THINKOS_ENABLE_CRITICAL
+	unsigned int pri;
+#endif
+	uint32_t now;
+	unsigned int cnt;
+
+	now = __timer_ts();
+	if (len > 255)
+		len = 255;
+
+	cnt = (len + 3) / 4;
+
+	if (cnt == 0)
+		return;
+
+#if THINKOS_ENABLE_CRITICAL
+	thinkos_critical_enter();
+#else
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+#endif
+
+	head = trace_ring.head;
+	if ((TRACE_RING_SIZE + trace_ring.tail - head) >= (unsigned int)(cnt + 2)) {
+		uint32_t val;
+		int i;
+		int j;
+
+		trace_ring.buf[head++ & (TRACE_RING_SIZE - 1)].ref = ref;
+		trace_ring.buf[head++ & (TRACE_RING_SIZE - 1)].ts = now;
+
+		j = 0;
+		val = (len) | (cp[j++] << 8);
+		if (j < len) {
+			val |= (cp[j++] << 16);
+			if (j < len) {
+				val |= (cp[j++] << 24);
+			}
+		}
+		trace_ring.buf[head++ & (TRACE_RING_SIZE - 1)].val = val;
+
+		for (i = 1, j = 3; i < (cnt - 1); ++i, j += 4) {
+			val = cp[j] | (cp[j + 1] << 8) | (cp[j + 2] << 16) | 
+				(cp[j + 3] << 24);
+			trace_ring.buf[head++ & (TRACE_RING_SIZE - 1)].val = val;
+		}
+
+		val = 0;
+		if (j < len) {
+			val = (cp[j++]);
+			if (j < len) {
+				val |= (cp[j++] << 8);
+				if (j < len) {
+					val |= (cp[j++] << 16);
+					if (j < len) {
+						val |= (cp[j++] << 24);
+					}
+				}
+			}
+			trace_ring.buf[head++ & (TRACE_RING_SIZE - 1)].val = val;
+		}
+
+		trace_ring.head = head;
+	}
+
+#if THINKOS_ENABLE_CRITICAL
+	thinkos_critical_exit();
+#else
+	cm3_primask_set(pri);
+#endif
+}
+
 void trace_i(const struct trace_ref * ref)
 {
 	unsigned int head;
@@ -370,3 +448,4 @@ void tracef_i(const struct trace_ref * ref, ... )
 
 	cm3_primask_set(pri);
 }
+
